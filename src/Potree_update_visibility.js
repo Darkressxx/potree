@@ -3,34 +3,29 @@ import * as THREE from "../libs/three.js/build/three.module.js";
 import {ClipTask, ClipMethod} from "./defines.js";
 import {Box3Helper} from "./utils/Box3Helper.js";
 
-export function updatePointClouds(pointclouds, camera, renderer){
+export function updatePointClouds(pointclouds, camera, renderer) {
+  let start = performance.now();
 
-	for (let pointcloud of pointclouds) {
-		let start = performance.now();
+  for (let pointcloud of pointclouds) {
+    for (let profileRequest of pointcloud.profileRequests) {
+      profileRequest.update();
+    }
+  }
 
-		for (let profileRequest of pointcloud.profileRequests) {
-			profileRequest.update();
+  let result = updateVisibility(pointclouds, camera, renderer);
 
-			let duration = performance.now() - start;
-			if(duration > 5){
-				break;
-			}
-		}
+  for (let pointcloud of pointclouds) {
+    pointcloud.updateMaterial(pointcloud.material, pointcloud.visibleNodes, camera, renderer);
+    pointcloud.updateVisibleBounds();
+  }
 
-		let duration = performance.now() - start;
-	}
+  exports.lru.freeMemory();
 
-	let result = updateVisibility(pointclouds, camera, renderer);
+  let duration = performance.now() - start;
+  console.log('updatePointClouds took:', duration, 'ms');
 
-	for (let pointcloud of pointclouds) {
-		pointcloud.updateMaterial(pointcloud.material, pointcloud.visibleNodes, camera, renderer);
-		pointcloud.updateVisibleBounds();
-	}
-
-	exports.lru.freeMemory();
-
-	return result;
-};
+  return result;
+}
 
 
 
