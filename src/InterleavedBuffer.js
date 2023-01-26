@@ -1,40 +1,31 @@
-
-
-
-export class InterleavedBufferAttribute{
-	
-	constructor(name, bytes, numElements, type, normalized){
+export class InterleavedBufferAttribute {
+	constructor(name, bytes, numElements, type, normalized) {
 		this.name = name;
 		this.bytes = bytes;
 		this.numElements = numElements;
+		this.type = type;
 		this.normalized = normalized;
-		this.type = type; // gl type without prefix, e.g. "FLOAT", "UNSIGNED_INT"
 	}
-	
-};
+}
 
-export class InterleavedBuffer{
-
-	constructor(data, attributes, numElements){
+export class InterleavedBuffer {
+	constructor(data, attributes, numElements) {
 		this.data = data;
 		this.attributes = attributes;
-		this.stride = attributes.reduce( (a, att) => a + att.bytes, 0);
-		this.stride = Math.ceil(this.stride / 4) * 4;
 		this.numElements = numElements;
+		this.stride = this.computeStride();
+		this.attributeOffsets = new Map(attributes.map(({name, bytes}) => [name, bytes]));
 	}
-	
-	offset(name){
-		let offset = 0;
-		
-		for(let att of this.attributes){
-			if(att.name === name){
-				return offset;
-			}
-			
-			offset += att.bytes;
+
+	computeStride() {
+		let stride = 0;
+		for (let att of this.attributes) {
+			stride += att.bytes;
 		}
-		
-		return null;
+		return (stride + 3) & ~3;
 	}
-	
-};
+
+	offset(name) {
+		return this.attributeOffsets.get(name) || null;
+	}
+}
