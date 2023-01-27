@@ -1,104 +1,86 @@
-
 import * as THREE from "../libs/three.js/build/three.module.js";
 import {ClipTask, ClipMethod} from "./defines.js";
 import {Box3Helper} from "./utils/Box3Helper.js";
 
-export function updatePointClouds(pointclouds, camera, renderer){
+export function updatePointClouds(pointclouds, camera, renderer) {
+  let start = performance.now();
 
-	for (let pointcloud of pointclouds) {
-		let start = performance.now();
+  for (let pointcloud of pointclouds) {
+    for (let profileRequest of pointcloud.profileRequests) {
+      profileRequest.update();
+    }
+  }
 
-		for (let profileRequest of pointcloud.profileRequests) {
-			profileRequest.update();
+  let result = updateVisibility(pointclouds, camera, renderer);
 
-			let duration = performance.now() - start;
-			if(duration > 5){
-				break;
-			}
-		}
+  for (let pointcloud of pointclouds) {
+    pointcloud.updateMaterial(pointcloud.material, pointcloud.visibleNodes, camera, renderer);
+    pointcloud.updateVisibleBounds();
+  }
 
-		let duration = performance.now() - start;
-	}
+  exports.lru.freeMemory();
 
-	let result = updateVisibility(pointclouds, camera, renderer);
+  let duration = performance.now() - start;
+  console.log('updatePointClouds took:', duration, 'ms');
 
-	for (let pointcloud of pointclouds) {
-		pointcloud.updateMaterial(pointcloud.material, pointcloud.visibleNodes, camera, renderer);
-		pointcloud.updateVisibleBounds();
-	}
-
-	exports.lru.freeMemory();
-
-	return result;
-};
-
-
+  return result;
+}
 
 export function updateVisibilityStructures(pointclouds, camera, renderer) {
-	let frustums = [];
-	let camObjPositions = [];
-	let priorityQueue = new BinaryHeap(function (x) { return 1 / x.weight; });
+  let frustums = [];
+  let camObjPositions = [];
+  let priorityQueue = new BinaryHeap(x => 1 / x.weight);
 
-	for (let i = 0; i < pointclouds.length; i++) {
-		let pointcloud = pointclouds[i];
+  // frustum in object space
+  camera.updateMatrixWorld();
+  let frustum = new THREE.Frustum();
+  let viewI = camera.matrixWorldInverse;
+  let proj = camera.projectionMatrix;
+  
+  // use close near plane for frustum intersection
+  let frustumCam = camera.clone();
+  frustumCam.near = Math.min(camera.near, 0.1);
+  frustumCam.updateProjectionMatrix();
 
-		if (!pointcloud.initialized()) {
-			continue;
-		}
+  pointclouds.forEach((pointcloud, i) => {
+	if (!pointcloud.initialized()) return;
 
-		pointcloud.numVisibleNodes = 0;
-		pointcloud.numVisiblePoints = 0;
-		pointcloud.deepestVisibleLevel = 0;
-		pointcloud.visibleNodes = [];
-		pointcloud.visibleGeometry = [];
+	pointcloud.numVisibleNodes = 0;
+	pointcloud.numVisiblePoints = 0;
+	pointcloud.deepestVisibleLevel = 0;
+	pointcloud.visibleNodes = [];
+	pointcloud.visibleGeometry = [];
+  
+	let world = pointcloud.matrixWorld;
+	let fm = new THREE.Matrix4().multiply(proj).multiply(viewI).multiply(world);
+	frustums.push(frustum);
 
-		// frustum in object space
-		camera.updateMatrixWorld();
-		let frustum = new THREE.Frustum();
-		let viewI = camera.matrixWorldInverse;
-		let world = pointcloud.matrixWorld;
-		
-		// use close near plane for frustum intersection
-		let frustumCam = camera.clone();
-		frustumCam.near = Math.min(camera.near, 0.1);
-		frustumCam.updateProjectionMatrix();
-		let proj = camera.projectionMatrix;
+	// camera position in object space
+	let view = camera.matrixWorld;
+	let worldI = world.clone().invert();
+	let camMatrixObject = new THREE.Matrix4().multiply(worldI).multiply(view);
+	let camObjPos = new THREE.Vector3().setFromMatrixPosition(camMatrixObject);
+	camObjPositions.push(camObjPos);
 
-		let fm = new THREE.Matrix4().multiply(proj).multiply(viewI).multiply(world);
-		frustum.setFromProjectionMatrix(fm);
-		frustums.push(frustum);
-
-		// camera position in object space
-		let view = camera.matrixWorld;
-		let worldI = world.clone().invert();
-		let camMatrixObject = new THREE.Matrix4().multiply(worldI).multiply(view);
-		let camObjPos = new THREE.Vector3().setFromMatrixPosition(camMatrixObject);
-		camObjPositions.push(camObjPos);
-
-		if (pointcloud.visible && pointcloud.root !== null) {
-			priorityQueue.push({pointcloud: i, node: pointcloud.root, weight: Number.MAX_VALUE});
-		}
-
-		// hide all previously visible nodes
-		// if(pointcloud.root instanceof PointCloudOctreeNode){
-		//	pointcloud.hideDescendants(pointcloud.root.sceneNode);
-		// }
-		if (pointcloud.root.isTreeNode()) {
-			pointcloud.hideDescendants(pointcloud.root.sceneNode);
-		}
-
-		for (let j = 0; j < pointcloud.boundingBoxNodes.length; j++) {
-			pointcloud.boundingBoxNodes[j].visible = false;
-		}
+	if (pointcloud.visible && pointcloud.root !== null) {
+	  priorityQueue.unshift({pointcloud: i, node: pointcloud.root, weight: Number.MAX_VALUE});
 	}
 
-	return {
-		'frustums': frustums,
-		'camObjPositions': camObjPositions,
-		'priorityQueue': priorityQueue
-	};
-};
+	if (pointcloud.root.isTreeNode()) {
+	  pointcloud.hideDescendants(pointcloud.root.sceneNode);
+	}
 
+	for (let j = 0; j < pointcloud.boundingBoxNodes.length; j++) {
+	  pointcloud.boundingBoxNodes[j].visible = false;
+	}
+  });
+
+  return {
+	'frustums': frustums,
+	'camObjPositions': camObjPositions,
+	'priorityQueue': priorityQueue
+  };
+};
 
 export function updateVisibility(pointclouds, camera, renderer){
 
