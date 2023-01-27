@@ -1,4 +1,3 @@
-
 import * as THREE from "../../libs/three.js/build/three.module.js";
 import {Profile} from "./Profile.js";
 import {Utils} from "../utils.js";
@@ -51,60 +50,43 @@ constructor(viewer) {
 		e.scene.addEventListener('profile_removed', this.onRemove);
 	}
 
-	startInsertion (args = {}) {
-		let domElement = this.viewer.renderer.domElement;
-	
-		let profile = new Profile();
-		profile.name = args.name || 'Profile';
-	
-		this.dispatchEvent({
-			type: 'start_inserting_profile',
-			profile: profile
-		});
-	
+	startInsertion({ name } = {}) {
+		const domElement = this.viewer.renderer.domElement;
+		const profile = new Profile();
+		profile.name = name || 'Profile';
+		this.dispatchEvent({ type: 'start_inserting_profile', profile });
 		this.scene.add(profile);
-	
-		let cancel = {
-			callback: null
-		};
-	
-		let camera = this.viewer.scene.getActiveCamera();
-		let clientSize = this.viewer.renderer.getSize(new THREE.Vector2());
-		let insertionCallback = (e) => {
-			if(e.button === THREE.MOUSE.LEFT){
-				if(profile.points.length <= 1){
-					let distance = camera.position.distanceTo(profile.points[0]);
-					let pr = Utils.projectedRadius(1, camera, distance, clientSize.width, clientSize.height);
-					let width = (10 / pr);
+		const cancel = { callback: null };
+		const { width, height } = this.viewer.renderer.getSize(new THREE.Vector2());
+		const camera = this.viewer.scene.getActiveCamera();
+		const insertionCallback = e => {
+			e.preventDefault();
+			if (e.button === THREE.MOUSE.LEFT) {
+				if (profile.points.length <= 1) {
+					const distance = camera.position.distanceTo(profile.points[0]);
+					const pr = Utils.projectedRadius(1, camera, distance, width, height);
+					const width = (10 / pr);
 					profile.setWidth(width);
 				}
-	
 				profile.addMarker(profile.points[profile.points.length - 1].clone());
-	
-				this.viewer.inputHandler.startDragging(
-					profile.spheres[profile.spheres.length - 1]);
+				this.viewer.inputHandler.startDragging(profile.spheres[profile.spheres.length - 1]);
 			} else if (e.button === THREE.MOUSE.RIGHT) {
 				cancel.callback();
 			}
 		};
-	
-		cancel.callback = e => {
+		cancel.callback = () => {
 			profile.removeMarker(profile.points.length - 1);
 			domElement.removeEventListener('mouseup', insertionCallback, false);
 			this.viewer.removeEventListener('cancel_insertions', cancel.callback);
 		};
-	
 		this.viewer.addEventListener('cancel_insertions', cancel.callback);
 		domElement.addEventListener('mouseup', insertionCallback, false);
-	
 		profile.addMarker(new THREE.Vector3(0, 0, 0));
-		this.viewer.inputHandler.startDragging(
-			profile.spheres[profile.spheres.length - 1]);
-	
+		this.viewer.inputHandler.startDragging(profile.spheres[profile.spheres.length - 1]);
 		this.viewer.scene.addProfile(profile);
-	
 		return profile;
 	}
+
 	
 	
 	update() {
