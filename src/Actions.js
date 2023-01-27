@@ -1,83 +1,30 @@
-
-
 import {EventDispatcher} from "./EventDispatcher.js";
 
+const DEFAULT_ICON = '';
+
 export class Action extends EventDispatcher {
-	constructor (args = {}) {
-		super();
+    constructor ({ icon = DEFAULT_ICON, tooltip, onclick } = {}) {
+        super();
+        this.icon = icon;
+        this.tooltip = tooltip;
+        this.onclick = onclick || this.onclick;
+    }
 
-		this.icon = args.icon || '';
-		this.tooltip = args.tooltip;
+    onclick (event) { }
 
-		if (args.onclick !== undefined) {
-			this.onclick = args.onclick;
-		}
-	}
+    pairWith (object) { }
 
-	onclick (event) {
-
-	}
-
-	pairWith (object) {
-
-	}
-
-	setIcon (newIcon) {
-		let oldIcon = this.icon;
-
-		if (newIcon === oldIcon) {
-			return;
-		}
-
-		this.icon = newIcon;
-
-		this.dispatchEvent({
-			type: 'icon_changed',
-			action: this,
-			icon: newIcon,
-			oldIcon: oldIcon
-		});
-	}
-};
-
-//Potree.Actions = {};
-//
-//Potree.Actions.ToggleAnnotationVisibility = class ToggleAnnotationVisibility extends Potree.Action {
-//	constructor (args = {}) {
-//		super(args);
-//
-//		this.icon = Potree.resourcePath + '/icons/eye.svg';
-//		this.showIn = 'sidebar';
-//		this.tooltip = 'toggle visibility';
-//	}
-//
-//	pairWith (annotation) {
-//		if (annotation.visible) {
-//			this.setIcon(Potree.resourcePath + '/icons/eye.svg');
-//		} else {
-//			this.setIcon(Potree.resourcePath + '/icons/eye_crossed.svg');
-//		}
-//
-//		annotation.addEventListener('visibility_changed', e => {
-//			let annotation = e.annotation;
-//
-//			if (annotation.visible) {
-//				this.setIcon(Potree.resourcePath + '/icons/eye.svg');
-//			} else {
-//				this.setIcon(Potree.resourcePath + '/icons/eye_crossed.svg');
-//			}
-//		});
-//	}
-//
-//	onclick (event) {
-//		let annotation = event.annotation;
-//
-//		annotation.visible = !annotation.visible;
-//
-//		if (annotation.visible) {
-//			this.setIcon(Potree.resourcePath + '/icons/eye.svg');
-//		} else {
-//			this.setIcon(Potree.resourcePath + '/icons/eye_crossed.svg');
-//		}
-//	}
-//};
+    setIcon (newIcon) {
+        if (newIcon === this.icon) {
+            return;
+        }
+        const oldIcon = this.icon;
+        this.icon = newIcon;
+        this.dispatchEvent({
+            type: 'icon_changed',
+            action: this,
+            icon: newIcon,
+            oldIcon
+        });
+    }
+}
