@@ -1021,25 +1021,19 @@ export class ProfileWindowController {
 		});
 	}
 
-	setProfile (profile) {
-		if (this.profile !== null && this.profile !== profile) {
-			this.profile.removeEventListener('marker_moved', this._recompute);
-			this.profile.removeEventListener('marker_added', this._recompute);
-			this.profile.removeEventListener('marker_removed', this._recompute);
-			this.profile.removeEventListener('width_changed', this._recompute);
-		}
-
-		this.profile = profile;
-
-		{
-			this.profile.addEventListener('marker_moved', this._recompute);
-			this.profile.addEventListener('marker_added', this._recompute);
-			this.profile.addEventListener('marker_removed', this._recompute);
-			this.profile.addEventListener('width_changed', this._recompute);
-		}
-
-		this.recompute();
-	}
+    setProfile (profile) {
+        if (this.profile !== null && this.profile !== profile) {
+            this.profile.removeEventListener('marker_moved', this._recompute);
+            this.profile.removeEventListener('marker_added', this._recompute);
+            this.profile.removeEventListener('marker_removed', this._recompute);
+            this.profile.removeEventListener('width_changed', this._recompute);
+        }
+        this.profile = profile;
+        if(this.profile) {
+            this.profile.addEventListener('change', this._recompute);
+        }
+        this.recompute();
+    }
 
 	reset () {
 		this.profileWindow.reset();
