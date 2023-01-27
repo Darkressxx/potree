@@ -24,23 +24,13 @@ function copyMaterial(source, target) {
 
 
 class Batch{
-
 	constructor(geometry, material){
-		this.geometry = geometry;
-		this.material = material;
-
-		this.sceneNode = new THREE.Points(geometry, material);
-
-		this.geometryNode = {
-			estimatedSpacing: 1.0,
-			geometry: geometry,
-		};
+		this.sceneNode = new THREE.Points({ ...geometry, ...material });
+		this.geometryNode = { ...geometry, estimatedSpacing: 1.0 };
 	}
-
 	getLevel(){
 		return 0;
 	}
-
 }
 
 class ProfileFakeOctree extends PointCloudTree{
@@ -1087,45 +1077,34 @@ export class ProfileWindowController {
 		this.requests = [];
 	}
 
-	recompute () {
-		if (!this.profile) {
+	recompute() {
+		if (!this.profile || (this.scheduledRecomputeTime !== null && this.scheduledRecomputeTime > new Date().getTime())) {
 			return;
 		}
-
-		if (this.scheduledRecomputeTime !== null && this.scheduledRecomputeTime > new Date().getTime()) {
-			return;
-		} else {
-			this.scheduledRecomputeTime = new Date().getTime() + 100;
-		}
-		this.scheduledRecomputeTime = null;
-
+		this.scheduledRecomputeTime = new Date().getTime() + 100;
+	
 		this.reset();
-
-		for (let pointcloud of this.viewer.scene.pointclouds.filter(p => p.visible)) {
+	
+		const pointclouds = this.viewer.scene.pointclouds.filter(p => p.visible);
+		for (let pointcloud of pointclouds) {
 			let request = pointcloud.getPointsInProfile(this.profile, null, {
 				'onProgress': (event) => {
 					if (!this.enabled) {
+						request.cancel();
 						return;
 					}
-
 					this.progressHandler(pointcloud, event.points);
-
 					if (this.numPoints > this.threshold) {
 						this.finishLevelThenCancel();
 					}
 				},
 				'onFinish': (event) => {
 					if (!this.enabled) {
-
+						request.cancel();
 					}
 				},
-				'onCancel': () => {
-					if (!this.enabled) {
-
-					}
-				}
+				'onCancel': () => {}
 			});
-
 			this.requests.push(request);
 		}
 	}
