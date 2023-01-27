@@ -106,25 +106,23 @@ export class ProfileTool extends EventDispatcher {
 		return profile;
 	}
 	
-	update(){
-		let camera = this.viewer.scene.getActiveCamera();
-		let profiles = this.viewer.scene.profiles;
-		let renderAreaSize = this.viewer.renderer.getSize(new THREE.Vector2());
-		let clientWidth = renderAreaSize.width;
-		let clientHeight = renderAreaSize.height;
-
-		this.light.position.copy(camera.position);
-
-		// make size independant of distance
-		for(let profile of profiles){
-			for(let sphere of profile.spheres){				
-				let distance = camera.position.distanceTo(sphere.getWorldPosition(new THREE.Vector3()));
-				let pr = Utils.projectedRadius(1, camera, distance, clientWidth, clientHeight);
-				let scale = (15 / pr);
-				sphere.scale.set(scale, scale, scale);
-			}
+	update() {
+	  const camera = this.viewer.scene.getActiveCamera();
+	  const profiles = this.viewer.scene.profiles;
+	  const { width: clientWidth, height: clientHeight } = this.viewer.renderer.getSize(new THREE.Vector2());
+	  this.light.position.copy(camera.position);
+	  
+	  // make size independent of distance
+	  for (const profile of profiles) {
+		for (const sphere of profile.spheres) {
+		  const distance = camera.position.distanceTo(sphere.getWorldPosition(new THREE.Vector3()));
+		  const pr = Utils.projectedRadius(1, camera, distance, clientWidth, clientHeight);
+		  const scale = 15 / pr;
+		  sphere.scale.set(scale, scale, scale);
 		}
+	  }
 	}
+	
 
 	render(){
 		this.viewer.renderer.render(this.scene, this.viewer.scene.getActiveCamera());
