@@ -3,49 +3,58 @@ import * as THREE from "../libs/three.js/build/three.module.js";
 import {Points} from "./Points.js";
 
 export class ProfileData {
-	constructor (profile) {
-		this.profile = profile;
+    constructor (profile) {
+        this.profile = profile;
 
-		this.segments = [];
-		this.boundingBox = new THREE.Box3();
+        this.segments = [];
+        this.boundingBox = new THREE.Box3();
 
-		for (let i = 0; i < profile.points.length - 1; i++) {
-			let start = profile.points[i];
-			let end = profile.points[i + 1];
+        // Declare objects outside loop
+        let startGround = new THREE.Vector3();
+        let endGround = new THREE.Vector3();
+        let center = new THREE.Vector3();
+        let side = new THREE.Vector3();
+        let forward = new THREE.Vector3();
+        let N = forward;
+        let cutPlane = new THREE.Plane();
+        let halfPlane = new THREE.Plane();
 
-			let startGround = new THREE.Vector3(start.x, start.y, 0);
-			let endGround = new THREE.Vector3(end.x, end.y, 0);
+        for (let i = 0; i < profile.points.length - 1; i++) {
+            let start = profile.points[i];
+            let end = profile.points[i + 1];
 
-			let center = new THREE.Vector3().addVectors(endGround, startGround).multiplyScalar(0.5);
-			let length = startGround.distanceTo(endGround);
-			let side = new THREE.Vector3().subVectors(endGround, startGround).normalize();
-			let up = new THREE.Vector3(0, 0, 1);
-			let forward = new THREE.Vector3().crossVectors(side, up).normalize();
-			let N = forward;
-			let cutPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(N, startGround);
-			let halfPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(side, center);
+            // Re-use objects within loop
+            startGround.set(start.x, start.y, 0);
+            endGround.set(end.x, end.y, 0);
 
-			let segment = {
-				start: start,
-				end: end,
-				cutPlane: cutPlane,
-				halfPlane: halfPlane,
-				length: length,
-				points: new Points()
-			};
+            center.addVectors(endGround, startGround).multiplyScalar(0.5);
+            let length = startGround.distanceTo(endGround);
+            side.subVectors(endGround, startGround).normalize();
+            forward.crossVectors(side, new THREE.Vector3(0, 0, 1)).normalize();
+            cutPlane.setFromNormalAndCoplanarPoint(N, startGround);
+            halfPlane.setFromNormalAndCoplanarPoint(side, center);
 
-			this.segments.push(segment);
-		}
-	}
+            let segment = {
+                start: start,
+                end: end,
+                cutPlane: cutPlane,
+                halfPlane: halfPlane,
+                length: length,
+                points: new Points()
+            };
 
-	size () {
-		let size = 0;
-		for (let segment of this.segments) {
-			size += segment.points.numPoints;
-		}
+            this.segments.push(segment);
+        }
+    }
 
-		return size;
-	}
+    size () {
+        let size = 0;
+        for (let segment of this.segments) {
+            size += segment.points.numPoints;
+        }
+
+        return size;
+    }
 };
 
 export class ProfileRequest {
