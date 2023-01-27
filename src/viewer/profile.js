@@ -12,21 +12,14 @@ import {PointCloudMaterial} from "../materials/PointCloudMaterial.js";
 import {PointSizeType} from "../defines.js";
 
 
-function copyMaterial(source, target){
-
-	for(let name of Object.keys(target.uniforms)){
-		target.uniforms[name].value = source.uniforms[name].value;
+function copyMaterial(source, target) {
+  for (let prop in source) {
+	if (target.hasOwnProperty(prop)) {
+	  target[prop] = source[prop];
 	}
-
-	target.gradientTexture = source.gradientTexture;
-	target.visibleNodesTexture = source.visibleNodesTexture;
-	target.classificationTexture = source.classificationTexture;
-	target.matcapTexture = source.matcapTexture;
-
-	target.activeAttributeName = source.activeAttributeName;
-	target.ranges = source.ranges;
-
-	//target.updateShaderSource();
+  }
+  // Or using the spread operator 
+  // Object.assign(target, source);
 }
 
 
