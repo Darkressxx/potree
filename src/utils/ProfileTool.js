@@ -6,39 +6,40 @@ import { EventDispatcher } from "../EventDispatcher.js";
 
 
 export class ProfileTool extends EventDispatcher {
-	constructor (viewer) {
-		super();
-
-		this.viewer = viewer;
-		this.renderer = viewer.renderer;
-
-		this.addEventListener('start_inserting_profile', e => {
-			this.viewer.dispatchEvent({
-				type: 'cancel_insertions'
-			});
+constructor(viewer) {
+	super();
+	this.viewer = viewer;
+	this.renderer = viewer.renderer;
+	this.profiles = new Set();
+	this.addEventListener('start_inserting_profile', e => {
+		this.viewer.dispatchEvent({
+			type: 'cancel_insertions'
 		});
-
-		this.scene = new THREE.Scene();
-		this.scene.name = 'scene_profile';
-		this.light = new THREE.PointLight(0xffffff, 1.0);
-		this.scene.add(this.light);
-
-		this.viewer.inputHandler.registerInteractiveScene(this.scene);
-
-		this.onRemove = e => this.scene.remove(e.profile);
-		this.onAdd = e => this.scene.add(e.profile);
-
-		for(let profile of viewer.scene.profiles){
-			this.onAdd({profile: profile});
+	});
+	this.scene = new THREE.Scene();
+	this.scene.name = 'scene_profile';
+	this.light = new THREE.PointLight(0xffffff, 1.0);
+	this.scene.add(this.light);
+	this.viewer.inputHandler.registerInteractiveScene(this.scene);
+	this.update = e => {};
+	this.render = e => {};
+	this.onSceneChange = e => {};
+	this.onProfileChange = e => {
+		if(e.type === 'profile_added') {
+			this.profiles.add(e.profile);
+			this.scene.add(e.profile);
+		} else if(e.type === 'profile_removed') {
+			this.profiles.delete(e.profile);
+			this.scene.remove(e.profile);
 		}
-
-		viewer.addEventListener("update", this.update.bind(this));
-		viewer.addEventListener("render.pass.perspective_overlay", this.render.bind(this));
-		viewer.addEventListener("scene_changed", this.onSceneChange.bind(this));
-
-		viewer.scene.addEventListener('profile_added', this.onAdd);
-		viewer.scene.addEventListener('profile_removed', this.onRemove);
 	}
+	viewer.addEventListener("update", this.update);
+	viewer.addEventListener("render.pass.perspective_overlay", this.render);
+	viewer.addEventListener("scene_changed", this.onSceneChange);
+	viewer.scene.addEventListener('profile_added', this.onProfileChange);
+	viewer.scene.addEventListener('profile_removed', this.onProfileChange);
+}
+
 
 	onSceneChange(e){
 		if(e.oldScene){
